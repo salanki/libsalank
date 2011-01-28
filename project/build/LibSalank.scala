@@ -14,6 +14,11 @@ class LibSalankProject(info: ProjectInfo) extends DefaultProject(info) with Ecli
   /****** Dependencies  *******/
   // Akka
 //  val akkaCamel = akkaModule("camel")
+  // Logging
+  private val logback_version = "0.9.17"
+  val slf4j = "org.slf4j" % "slf4j-api" % "1.5.8"
+  val logback_classic = "ch.qos.logback" % "logback-classic" % logback_version
+  val logback_core = "ch.qos.logback" % "logback-core" % logback_version
   // I/O
 //  val dispatch_http = "net.databinder" % "dispatch-http_2.8.0.Beta1" % "0.6.6"
   // val akka_persistence = "se.scalablesolutions.akka" % "akka-persistence_2.8.0"  % "0.10"
