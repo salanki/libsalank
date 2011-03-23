@@ -114,7 +114,7 @@ class HawtTcpClientTestActor extends Actor {
   }
 }
 
-class HawtIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMatchers {
+class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMatchers {
   feature("A TCP Connection can be created") {
     scenario("start is invoked with an existing listening host") {
       given("an actor listening")
