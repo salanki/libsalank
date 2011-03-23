@@ -167,5 +167,5 @@ class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteB
     }
   }
 
-  override def toString = "HawtUdpIO for: " + actor
+  override def toString = "HawtTcpIO for: " + actor +" server: " +target + " connected: " + connected
 }
