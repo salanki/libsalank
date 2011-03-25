@@ -14,6 +14,7 @@ import java.io.{BufferedReader, InputStreamReader}
 
 object Shared {
   val port = 9000 + ((new java.util.Random).nextInt % 500)
+  val hawtDispatcher = new HawtDispatcher
 }
 
 /* Messages for TcpTestActor */
@@ -69,15 +70,18 @@ class TcpTestActor extends Actor {
 case object Start
 case object GetCrashState
 case object GetConnectFailedState
+case object GetOnConnectState
+case object GetConnectedState
 case class Send(data: List[String])
 
 /** Our actor using the HawtTcpClient, should also be a good simple example of usage */
 class HawtTcpClientTestActor extends Actor {
-  self.dispatcher = new HawtDispatcher
+  self.dispatcher = Shared.hawtDispatcher
   var crash = false
   var connectFailed = false
+  var onConnectRun = false
 
-  val io = new HawtTcpClient(self, new java.net.InetSocketAddress("localhost", Shared.port), msgHandler, crashHandler, tcpNoDelay = true)
+  val io = new HawtTcpClient(self, new java.net.InetSocketAddress("localhost", Shared.port), msgHandler, crashHandler, onConnect, tcpNoDelay = true)
 
   override def preStart = {}
 
@@ -85,6 +89,8 @@ class HawtTcpClientTestActor extends Actor {
 
   }
 
+  private def onConnect() = onConnectRun = true
+  
   private def crashHandler(e: Exception) {
     println("CRASH: ", e)
     crash = true
@@ -104,6 +110,8 @@ class HawtTcpClientTestActor extends Actor {
     case Start => start
     case GetCrashState => self.reply(crash)
     case GetConnectFailedState => self.reply(connectFailed)
+    case GetOnConnectState => self.reply(onConnectRun)
+    case GetConnectedState => self.reply(io.connected)
     case Send(data) => data.foreach{row => io.enqueuePacket(row.getBytes) } 
     
     case msg => error("received unknown message: " + msg)
@@ -115,6 +123,9 @@ class HawtTcpClientTestActor extends Actor {
 }
 
 class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMatchers {
+	
+  info("Using port: " + Shared.port)
+  
   feature("A TCP Connection can be created") {
     scenario("start is invoked with an existing listening host") {
       given("an actor listening")
@@ -123,6 +134,14 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
       given("an actor connecing with HawtTcpClient")
       val io = Actor.actorOf[HawtTcpClientTestActor].start()
 
+      when("The actor is started")
+      
+      then("The onConnect trigger should NOT have been run")
+      (io !!! GetOnConnectState).await.result should be(Some(false))
+
+      then("The client should know that it is NOT connected")
+      (io !!! GetConnectedState).await.result should be(Some(false))
+      
       when("TcpClient is connecting")
       val listenFuture = listener !!! Accept
       io ! Start
@@ -133,6 +152,13 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
       then("The client should NOT have yielded an error")
       (io !!! GetCrashState).await.result should be(Some(false))
 
+      Thread.sleep(100) /* Want to make sure that messages had time to pass */
+      then("The onConnect trigger should have been run")
+      (io !!! GetOnConnectState).await.result should be(Some(true))
+      
+      then("The client should know that it is connected")
+      (io !!! GetConnectedState).await.result should be(Some(true))
+      
       /* Cleanup */
       io.stop()
       listener.stop()
@@ -150,6 +176,12 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
       then("The client should have yielded a connection error")
       (io !!! GetConnectFailedState).await.result should be(Some(true))
 
+      then("The onConnect trigger should NOT have been run")
+      (io !!! GetOnConnectState).await.result should be(Some(false))
+
+      then("The client should know that it is NOT connected")
+      (io !!! GetConnectedState).await.result should be(Some(false))
+      
       /* Cleanup */
       io.stop()
     }

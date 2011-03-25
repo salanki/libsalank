@@ -27,10 +27,11 @@ class ConnectionFinaliztionException extends IOException("Connection failed")
  * @param	target			Server to connect to
  * @param	packetHandler	Function that is executed on all received packets on the socket. The <code>ByteBuffer</code> supplied is mutable and reused for each packet, do not let it leave the function.
  * @param 	crashHandler	Function that is executed on a socket crash (I/O Exception mostly). If using actor supervision a standard implementation would be: <code>{e => error("I/O Error", e); ActorShared.supervisor ! Exit(self, e)}</code>
+ * @param	onConnect		Function that is executed when the TCP socket is connected. Does not have to be defined.
  * @param	bindAddress		Optional SocketAddress to bind to
  * @param	pin				Pin actor so it is always executed on the selector thread
  */
-class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteBuffer => Unit, crashHandler: (Exception) => Unit, bindAddress: Option[SocketAddress] = None, pin: Boolean = false, keepAlive: Boolean = true, tcpNoDelay: Boolean = false) {
+class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteBuffer => Unit, crashHandler: (Exception) => Unit, onConnect: () => Unit = () => (), bindAddress: Option[SocketAddress] = None, pin: Boolean = false, keepAlive: Boolean = true, tcpNoDelay: Boolean = false) {
   /* Socket */
   private var channel: SocketChannel = _
   private var connectSource: DispatchSource = _
@@ -80,6 +81,7 @@ class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteB
         readSource.resume
         if(!writeQueue.isEmpty) writeSource.resume
         
+        onConnect()
       } else {
         /* Connection failed */
         socketCrash(new ConnectionFinaliztionException)

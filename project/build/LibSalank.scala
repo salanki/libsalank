@@ -76,7 +76,9 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   // -------------------------------------------------------------------------------------------------------------------
 
   class LibSalankAkkaProject(info: ProjectInfo) extends LibSalankDefaultProject(info) with AkkaProject {
-	  //  val akkaCamel = akkaModule("camel")
+	//  val akkaCamel = akkaModule("camel")
+	// testing
+	val scalatest = Dependencies.scalaTest
   }
   
   // -------------------------------------------------------------------------------------------------------------------
