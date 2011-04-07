@@ -24,13 +24,13 @@ import akka.dispatch.HawtDispatcher
  * @param 	crashHandler	Function that is executed on a socket crash (I/O Exception mostly). If using actor supervision a standard implementation would be: <code>{e => error("I/O Error", e); ActorShared.supervisor ! Exit(self, e)}</code>
  * @param	bindAddress		Optional SocketAddress to bind to
  * @param	pin				Pin actor so it is always executed on the selector thread
+ * @param	readBufferSize	Read buffer size. Defaults to 4096
  */
-class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => Unit, crashHandler: (Exception) => Unit, bindAddress: Option[SocketAddress] = None, pin: Boolean = false) {
-  /* Socket */
+class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => Unit, crashHandler: (Exception) => Unit, bindAddress: Option[SocketAddress] = None, pin: Boolean = false, readBufferSize: Int = 4096) {
   private var channel: DatagramChannel = _
   private var writeSource: DispatchSource = _
   private var readSource: DispatchSource = _
-  private val readBuffer: ByteBuffer = ByteBuffer.allocate(4096) /* Random number */
+  private val readBuffer: ByteBuffer = ByteBuffer.allocate(readBufferSize) /* Random number */
   private var writeBuffer: Option[ByteBuffer] = None
   private var writeTarget: InetSocketAddress = _
 

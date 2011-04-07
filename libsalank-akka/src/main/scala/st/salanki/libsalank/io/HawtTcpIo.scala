@@ -30,14 +30,16 @@ class ConnectionFinaliztionException extends IOException("Connection failed")
  * @param	onConnect		Function that is executed when the TCP socket is connected. Does not have to be defined.
  * @param	bindAddress		Optional SocketAddress to bind to
  * @param	pin				Pin actor so it is always executed on the selector thread
+ * @param	keepAlive		Enable TCP KeepAlive. Defaults to true
+ * @param	tcpNoDelay		Enable TCP NoDelay. Defaults to false
+ * @param	readBufferSize	Read buffer size. Defaults to 4096
  */
-class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteBuffer => Unit, crashHandler: (Exception) => Unit, onConnect: () => Unit = () => (), bindAddress: Option[SocketAddress] = None, pin: Boolean = false, keepAlive: Boolean = true, tcpNoDelay: Boolean = false) {
-  /* Socket */
+class HawtTcpClient(actor: ActorRef, target: SocketAddress, packetHandler: ByteBuffer => Unit, crashHandler: (Exception) => Unit, onConnect: () => Unit = () => (), bindAddress: Option[SocketAddress] = None, pin: Boolean = false, keepAlive: Boolean = true, tcpNoDelay: Boolean = false, readBufferSize: Int = 4096) {
   private var channel: SocketChannel = _
   private var connectSource: DispatchSource = _
   private var writeSource: DispatchSource = _
   private var readSource: DispatchSource = _
-  private val readBuffer: ByteBuffer = ByteBuffer.allocate(4096) /* Random number */
+  private val readBuffer: ByteBuffer = ByteBuffer.allocate(readBufferSize)
   private var writeBuffer: Option[ByteBuffer] = None
 
   private var closed = false
