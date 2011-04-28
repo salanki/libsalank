@@ -20,7 +20,7 @@ import akka.dispatch.HawtDispatcher
  * HawtUdpIo is automatically stopped on a socket crash (I/O Exception mostly) and needs to be manually restarted. If the <code>crashError</code> is used to restart the parent actor the IO instance will also be restarted automatically as start() is run in actor preStart()<br/>
  * 
  * @param	actor			ActorRef to parent actor, just pass <code>self</code> in here
- * @param	packetHandler	Function that is executed on all received packets on the socket. The <code>ByteBuffer</code> supplied is mutable and reused for each packet, do not let it leave the function. 
+ * @param	packetHandler	Function that is executed on all received packets on the socket. The <code>ByteBuffer</code> supplied is mutable and reused for each packet, do not let it leave the function. Not catching Exceptions in your code here might lead to socket stalling. 
  * @param 	crashHandler	Function that is executed on a socket crash (I/O Exception mostly). If using actor supervision a standard implementation would be: <code>{e => error("I/O Error", e); ActorShared.supervisor ! Exit(self, e)}</code>
  * @param	bindAddress		Optional SocketAddress to bind to
  * @param	pin				Pin actor so it is always executed on the selector thread
@@ -36,7 +36,7 @@ class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => U
 
   private var closed = false
   var writeCounter = 0L
-  private val writeQueue = Queue[(InetSocketAddress, Array[Byte])]()
+  val writeQueue = Queue[(InetSocketAddress, Array[Byte])]()
 
   /** Allocate and start socket for communication to DHCP Server */
   def start() = {
@@ -57,9 +57,11 @@ class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => U
   }
 
   /** Place a packet in the send-queue and enable writing */
-  def enqueuePacket(packet: Array[Byte], target: InetSocketAddress) = {
+  def enqueuePacket(packet: Array[Byte], target: InetSocketAddress, prepend: Boolean = false) = {
     if (writeQueue.isEmpty && writeSource != null) writeSource.resume
-    writeQueue += Pair(target, packet)
+    
+    if(prepend) Pair(target, packet) +: writeQueue
+    else writeQueue += Pair(target, packet)
   }
 
   /** Catch IO Exception */

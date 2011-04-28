@@ -37,9 +37,9 @@ trait Timed {
  * @author Peter Salanki
  */	
 trait LogTimed extends Timed {
-  def debug(message:String, values:Any*): Unit
+  protected def debug(message:String, values:Any*): Unit
   
-  def debugTimer(name: Symbol) = debug(name + " took " + timer.getS(name) + "s and " + (timer.getMs(name) - timer.getS(name)*1000) +"ms")
+  protected def debugTimer(name: Symbol) = debug(name + " took " + timer.getS(name) + "s and " + (timer.getMs(name) - timer.getS(name)*1000) +"ms")
 }
 
 /**
