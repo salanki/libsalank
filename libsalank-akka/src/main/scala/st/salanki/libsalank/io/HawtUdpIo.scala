@@ -5,8 +5,7 @@ import akka.actor.{ Actor, ActorRef }
 import java.nio.channels.{ SelectionKey, DatagramChannel }
 import java.net.{ SocketAddress, InetSocketAddress }
 import java.io.IOException
-import org.fusesource.hawtdispatch.DispatchSource
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.nio.ByteBuffer
 import scala.collection.mutable.Queue
 import akka.dispatch.HawtDispatcher
@@ -18,6 +17,7 @@ import akka.dispatch.HawtDispatcher
  * Actor preStart() should call start()<br/>
  * Actor postStop and preRestart should call stop()<br/>
  * HawtUdpIo is automatically stopped on a socket crash (I/O Exception mostly) and needs to be manually restarted. If the <code>crashError</code> is used to restart the parent actor the IO instance will also be restarted automatically as start() is run in actor preStart()<br/>
+ * If bindAddress is used and the bind fails a java.net.bindException will be thrown from start()
  * 
  * @param	actor			ActorRef to parent actor, just pass <code>self</code> in here
  * @param	packetHandler	Function that is executed on all received packets on the socket. The <code>ByteBuffer</code> supplied is mutable and reused for each packet, do not let it leave the function. Not catching Exceptions in your code here might lead to socket stalling. 
@@ -44,10 +44,10 @@ class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => U
     channel.configureBlocking(false)
     bindAddress.foreach { channel.socket().bind(_) }
 
-    readSource = createSource(channel, SelectionKey.OP_READ, HawtDispatcher.queue(actor));
+    readSource = createSource(channel, SelectionKey.OP_READ, HawtDispatcher.queue(actor))
     readSource.setEventHandler(^ { read })
 
-    writeSource = createSource(channel, SelectionKey.OP_WRITE, HawtDispatcher.queue(actor));
+    writeSource = createSource(channel, SelectionKey.OP_WRITE, HawtDispatcher.queue(actor))
     writeSource.setEventHandler(^ { write })
 
     readSource.resume

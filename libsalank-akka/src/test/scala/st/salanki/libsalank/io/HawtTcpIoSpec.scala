@@ -9,8 +9,8 @@ import org.scalatest.BeforeAndAfterEach
 import akka.actor.{ Actor, ActorRef }
 import akka.dispatch.HawtDispatcher
 import java.nio.ByteBuffer
-import java.net.{ ServerSocket, Socket }
-import java.io.{BufferedReader, InputStreamReader}
+import java.net.{ ServerSocket, Socket, SocketAddress, InetSocketAddress }
+import java.io.{ BufferedReader, InputStreamReader }
 
 object Shared {
   val port = 9000 + ((new java.util.Random).nextInt % 500)
@@ -24,7 +24,6 @@ case object Close
 case object GetData
 case object Success
 case object Fail
-
 
 /** Test fixture to verify operations **/
 class TcpTestActor extends Actor {
@@ -49,19 +48,19 @@ class TcpTestActor extends Actor {
       case e: java.net.SocketTimeoutException => self.reply(Fail)
     }
   }
-  
+
   def getData() = {
-	  val is = connection.getInputStream()
-	  val reader = new BufferedReader(new InputStreamReader(is))
-	   
-	  self.reply(reader.readLine)
+    val is = connection.getInputStream()
+    val reader = new BufferedReader(new InputStreamReader(is))
+
+    self.reply(reader.readLine)
   }
 
   def receive = {
     case Close => connection.close()
     case Accept => accept()
     case GetData => getData()
-    
+
     case msg => error("received unknown message: " + msg)
   }
 }
@@ -69,19 +68,21 @@ class TcpTestActor extends Actor {
 /* Messages for HawtTcpClientTestActor */
 case object Start
 case object GetCrashState
+case object GetBindExceptionState
 case object GetConnectFailedState
 case object GetOnConnectState
 case object GetConnectedState
 case class Send(data: List[String])
 
 /** Our actor using the HawtTcpClient, should also be a good simple example of usage */
-class HawtTcpClientTestActor extends Actor {
+class HawtTcpClientTestActor(val bindAddress: Option[SocketAddress] = None) extends Actor {
   self.dispatcher = Shared.hawtDispatcher
   var crash = false
+  var bindException = false
   var connectFailed = false
   var onConnectRun = false
 
-  val io = new HawtTcpClient(self, new java.net.InetSocketAddress("localhost", Shared.port), msgHandler, crashHandler, onConnect, tcpNoDelay = true)
+  val io = new HawtTcpClient(self, new java.net.InetSocketAddress("localhost", Shared.port), msgHandler, crashHandler, onConnect, bindAddress, tcpNoDelay = true)
 
   override def preStart = {}
 
@@ -90,7 +91,7 @@ class HawtTcpClientTestActor extends Actor {
   }
 
   private def onConnect() = onConnectRun = true
-  
+
   private def crashHandler(e: Exception) {
     println("CRASH: ", e)
     crash = true
@@ -103,17 +104,22 @@ class HawtTcpClientTestActor extends Actor {
   private def start = {
     crash = false
     connectFailed = false
-    io.start()
+    try {
+      io.start()
+    } catch {
+      case e: java.net.BindException => bindException = true
+    }
   }
 
   def receive = {
     case Start => start
     case GetCrashState => self.reply(crash)
+    case GetBindExceptionState => self.reply(bindException)
     case GetConnectFailedState => self.reply(connectFailed)
     case GetOnConnectState => self.reply(onConnectRun)
     case GetConnectedState => self.reply(io.connected)
-    case Send(data) => data.foreach{row => io.enqueuePacket(row.getBytes) } 
-    
+    case Send(data) => data.foreach { row => io.enqueuePacket(row.getBytes) }
+
     case msg => error("received unknown message: " + msg)
   }
 
@@ -123,25 +129,25 @@ class HawtTcpClientTestActor extends Actor {
 }
 
 class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMatchers {
-	
+
   info("Using port: " + Shared.port)
-  
+
   feature("A TCP Connection can be created") {
     scenario("start is invoked with an existing listening host") {
       given("an actor listening")
-      val listener = Actor.actorOf[TcpTestActor].start()
+      val listener = Actor.actorOf(new TcpTestActor).start()
 
       given("an actor connecing with HawtTcpClient")
-      val io = Actor.actorOf[HawtTcpClientTestActor].start()
+      val io = Actor.actorOf(new HawtTcpClientTestActor).start()
 
       when("The actor is started")
-      
+
       then("The onConnect trigger should NOT have been run")
       (io !!! GetOnConnectState).await.result should be(Some(false))
 
       then("The client should know that it is NOT connected")
       (io !!! GetConnectedState).await.result should be(Some(false))
-      
+
       when("TcpClient is connecting")
       val listenFuture = listener !!! Accept
       io ! Start
@@ -155,10 +161,10 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
       Thread.sleep(100) /* Want to make sure that messages had time to pass */
       then("The onConnect trigger should have been run")
       (io !!! GetOnConnectState).await.result should be(Some(true))
-      
+
       then("The client should know that it is connected")
       (io !!! GetConnectedState).await.result should be(Some(true))
-      
+
       /* Cleanup */
       io.stop()
       listener.stop()
@@ -166,13 +172,13 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
 
     scenario("start is invoked without a listening host") {
       given("an actor connecing with HawtTcpClient")
-      val io = Actor.actorOf[HawtTcpClientTestActor].start()
+      val io = Actor.actorOf(new HawtTcpClientTestActor).start()
 
       when("TcpClient is connecting")
       io ! Start
 
       Thread.sleep(1000)
-      
+
       then("The client should have yielded a connection error")
       (io !!! GetConnectFailedState).await.result should be(Some(true))
 
@@ -181,7 +187,25 @@ class HawtTcpIoConnectSpec extends FeatureSpec with GivenWhenThen with ShouldMat
 
       then("The client should know that it is NOT connected")
       (io !!! GetConnectedState).await.result should be(Some(false))
-      
+
+      /* Cleanup */
+      io.stop()
+    }
+  }
+
+  feature("Binding") {
+    scenario("start is invoked with an invalid bind-address") {
+      given("an actor connecing with HawtTcpClient")
+      val io = Actor.actorOf(new HawtTcpClientTestActor(Some(new java.net.InetSocketAddress("193.25.199.1", 53)))).start()
+
+      when("TcpClient is connecting")
+      io ! Start
+
+      Thread.sleep(1000)
+
+      then("The client should have yielded a bind exception")
+      (io !!! GetBindExceptionState).await.result should be(Some(true))
+
       /* Cleanup */
       io.stop()
     }
@@ -193,9 +217,9 @@ class HawtTcpClientSpec extends FeatureSpec with GivenWhenThen with ShouldMatche
   private var io: akka.actor.ActorRef = _
 
   override def beforeEach() {
-    listener = Actor.actorOf[TcpTestActor].start()
-    io = Actor.actorOf[HawtTcpClientTestActor].start()
-    
+    listener = Actor.actorOf(new TcpTestActor).start()
+    io = Actor.actorOf(new HawtTcpClientTestActor).start()
+
     val listenFuture = listener !!! Accept
     io ! Start
 
@@ -216,31 +240,30 @@ class HawtTcpClientSpec extends FeatureSpec with GivenWhenThen with ShouldMatche
       listener ! Close
 
       Thread.sleep(1000)
-      
+
       then("The client should have yielded an error")
       (io !!! GetCrashState).await.result should be(Some(true))
 
     }
   }
-  
+
   feature("Can send data to a remote socket") {
-	  scenario("sending a short line of data") {
-	 	  val data = List("data\n")
-	 	  
-	 	  when("sending data")
-	 	  io ! Send(data)
-	 	  
-	 	  then("the listener should have received the same data")
-	 	  (listener !!! GetData).await.result should be(Some("data"))
-	  }
-	   
-	  scenario("sending a large amount of data in one chunk") (pending)
-	  scenario("sending a large amount of data in a lot of smaller chunks") (pending)
+    scenario("sending a short line of data") {
+      val data = List("data\n")
+
+      when("sending data")
+      io ! Send(data)
+
+      then("the listener should have received the same data")
+      (listener !!! GetData).await.result should be(Some("data"))
+    }
+
+    scenario("sending a large amount of data in one chunk")(pending)
+    scenario("sending a large amount of data in a lot of smaller chunks")(pending)
   }
-  
 
   feature("Can receive data from a remote socket") {
-	  scenario("receiving a small amount of data") (pending)
-	  scenario("receiving a large amount of data") (pending)
+    scenario("receiving a small amount of data")(pending)
+    scenario("receiving a large amount of data")(pending)
   }
 }

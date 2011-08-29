@@ -6,7 +6,7 @@ import java.nio.channels.{ SelectionKey, SocketChannel }
 import java.net.{ SocketAddress, InetSocketAddress }
 import java.io.IOException
 import org.fusesource.hawtdispatch.DispatchSource
-import org.fusesource.hawtdispatch.ScalaDispatch._
+import org.fusesource.hawtdispatch._
 import java.nio.ByteBuffer
 import scala.collection.mutable.Queue
 import akka.dispatch.HawtDispatcher
@@ -24,7 +24,8 @@ class WriteTimeoutException extends IOException("Write timed out")
  * Actor preStart() should call start()<br/>
  * Actor postStop and preRestart should call stop()<br/>
  * HawtTcpIo is automatically stopped on a socket crash (I/O Exception mostly) and needs to be manually restarted. If the <code>crashError</code> is used to restart the parent actor the IO instance will also be restarted automatically as start() is run in actor preStart()<br/>
- * Connects are nonblocking, if a connection fails java.net.ConnectException will be sent to the crashHandler. Packets can be safely enqueued while connection is in process.
+ * Connects are nonblocking, if a connection fails java.net.ConnectException will be sent to the crashHandler. Packets can be safely enqueued while connection is in process.<br/>
+ * If bindAddress is used and the bind fails a java.net.bindException will be thrown from start()
  *
  * @param	actor			ActorRef to parent actor, just pass <code>self</code> in here
  * @param	target			Server to connect to
