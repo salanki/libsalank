@@ -16,7 +16,7 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   val logbackClassic = "ch.qos.logback" % "logback-classic" % logback_version
   val logbackCore = "ch.qos.logback" % "logback-core" % logback_version
   // I/O
-  val dispatchHttp = "net.databinder" % "dispatch-http_2.8.1" % "0.7.8"
+  val dispatchHttp = "net.databinder" % "dispatch-http_2.9.0" % "0.8.3"
   // val akka_persistence = "se.scalablesolutions.akka" % "akka-persistence_2.8.0"  % "0.10"
   // DNS
 //	val dnsjava = "org.dnsjava" % "dnsjava" % "2.0.6"
@@ -33,7 +33,7 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   //val cassandra = "org.apache.cassandra" % "cassandra" % "0.5.1"
  // val postgresql = "postgresql" % "postgresql" % "8.4-701.jdbc4"
     // Testing
-   val scalaTest = "org.scalatest" % "scalatest" % "1.3"
+    val scalaTest = "org.scalatest" % "scalatest_2.9.0" % "1.6.1"
   }
   
   /******** Repositories *******/
@@ -77,6 +77,7 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
 
   class LibSalankAkkaProject(info: ProjectInfo) extends LibSalankDefaultProject(info) with AkkaProject {
 	//  val akkaCamel = akkaModule("camel")
+	val dispatcherExtras = akkaModule("dispatcher-extras")
 	// testing
 	val scalatest = Dependencies.scalaTest
   }
