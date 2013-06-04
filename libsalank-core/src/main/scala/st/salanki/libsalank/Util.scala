@@ -89,3 +89,47 @@ trait NameLogged extends Logged {
   logName = getClass.toString
   prependStr = "["+ name + "] "
 }
+
+/**
+ * Simple interface to work with CSV Files, using the Opencsv Java CSV library
+ *
+ * @author Peter Salanki
+ */
+object CSV {
+  import au.com.bytecode.opencsv.{CSVWriter, CSVReader}
+  import java.io.{FileWriter, FileReader}
+ // import scala.collection.JavaConversions
+  
+  trait PimpedWriter { this: CSVWriter =>
+     def writeNext(in: Iterable[String]): Unit = writeNext(in.toArray)
+     def writeNext(in: Any*): Unit = writeNext(in.map(_.toString))
+	 def writeAll(in: Iterable[Iterable[String]]): Unit = in.foreach(a => writeNext(a.toArray))
+  }
+  
+  trait PimpedReader { this: CSVReader =>
+  	def toList = {
+  		import scala.collection.JavaConversions._
+  		this.readAll.toList
+  	}
+  }
+  
+  def withCSVWriter(fileName: String)(block: (CSVWriter with PimpedWriter) => Unit) {
+    val writer = new CSVWriter(new FileWriter(fileName)) with PimpedWriter
+
+    try {
+      block(writer)
+    } finally {
+      writer.close()
+    }
+  }
+  
+ def withCSVReader[A](fileName: String)(block: (CSVReader with PimpedReader) => A): A = {
+    val reader = new CSVReader(new FileReader(fileName)) with PimpedReader
+
+    try {
+      block(reader)
+    } finally {
+      reader.close()
+    }
+  }
+}

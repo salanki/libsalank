@@ -30,7 +30,7 @@ class HawtUdpIo(actor: ActorRef, packetHandler: (ByteBuffer, SocketAddress) => U
   private var channel: DatagramChannel = _
   private var writeSource: DispatchSource = _
   private var readSource: DispatchSource = _
-  private val readBuffer: ByteBuffer = ByteBuffer.allocate(readBufferSize) /* Random number */
+  private val readBuffer: ByteBuffer = ByteBuffer.allocate(readBufferSize)
   private var writeBuffer: Option[ByteBuffer] = None
   private var writeTarget: InetSocketAddress = _
 

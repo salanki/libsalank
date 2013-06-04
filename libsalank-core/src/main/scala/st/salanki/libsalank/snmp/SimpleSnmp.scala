@@ -14,7 +14,9 @@ import org.snmp4j.mp.SnmpConstants
  * @author Peter Salanki
  */
 object SimpleSnmp {
-  def apply() = new SimpleSnmp()
+  def apply(bindAddress: String) = new SimpleSnmp(Some(bindAddress))
+  def apply() = new SimpleSnmp(None)
+  def apply(bindAddress: Option[String]) = new SimpleSnmp(bindAddress)
 }
 
 /**
@@ -25,8 +27,13 @@ object SimpleSnmp {
  * 
  * @author Peter Salanki
  */
-class SimpleSnmp extends Logged {
-  val transport = new DefaultUdpTransportMapping()
+class SimpleSnmp(bindAddress: Option[String]) extends Logged {
+  
+  val transport = bindAddress match {
+    case None => new DefaultUdpTransportMapping()
+    case Some(address) => new DefaultUdpTransportMapping(new UdpAddress(address))
+  }
+  
   val snmp = new Snmp(transport)
 
   transport.listen()

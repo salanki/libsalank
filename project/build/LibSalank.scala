@@ -11,19 +11,19 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   /****** Dependencies  *******/
   object Dependencies {
   // Logging
-  private val logback_version = "0.9.17"
-  val slf4j = "org.slf4j" % "slf4j-api" % "1.5.8"
+  private val logback_version = "0.9.29"
+  val slf4j = "org.slf4j" % "slf4j-api" % "1.6.2"
   val logbackClassic = "ch.qos.logback" % "logback-classic" % logback_version
   val logbackCore = "ch.qos.logback" % "logback-core" % logback_version
   // I/O
-  val dispatchHttp = "net.databinder" % "dispatch-http_2.9.0" % "0.8.3"
+  val dispatchHttp = "net.databinder" % "dispatch-http_2.9.1" % "0.8.5"
   // val akka_persistence = "se.scalablesolutions.akka" % "akka-persistence_2.8.0"  % "0.10"
   // DNS
 //	val dnsjava = "org.dnsjava" % "dnsjava" % "2.0.6"
  // CSV
    val opencsv = "net.sf.opencsv" % "opencsv" % "2.1"
   // SNMP
-  val snmp4j = "org.snmp4j" % "snmp4j" % "1.11.1"
+  val snmp4j = "org.snmp4j" % "snmp4j" % "1.11.3"
   // Lib
  // val scalaz = "com.googlecode.scalaz" % "scalaz-core_2.8.0.Beta1" % "5.0.1-SNAPSHOT"
   // Search
@@ -33,18 +33,17 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   //val cassandra = "org.apache.cassandra" % "cassandra" % "0.5.1"
  // val postgresql = "postgresql" % "postgresql" % "8.4-701.jdbc4"
     // Testing
-    val scalaTest = "org.scalatest" % "scalatest_2.9.0" % "1.6.1"
+    val scalaTest = "org.scalatest" % "scalatest_2.9.1" % "1.6.1"
   }
   
   /******** Repositories *******/
   val guiceyfruit = "GuiceyFruit" at "http://guiceyfruit.googlecode.com/svn/repo/releases"
   val databinder_net = "databinder.net repository" at "http://databinder.net/repo"
   val jBoss = "jBoss" at "http://repository.jboss.org/nexus/content/groups/public"
-//  val nexus = "Nexus Maven 2 repository" at "https://nexus.griddynamics.net/nexus/content/groups/public"
-  val multiverse = "Multiverse" at "http://multiverse.googlecode.com/svn/maven-repository/releases"
-//  val lag_net = "lag.net repository" at "http://www.lag.net/repo"
+  //val multiverse = "Multiverse" at "http://multiverse.googlecode.com/svn/maven-repository/releases"
    val java_net = "java.net repository" at "http://download.java.net/maven/2"
-   val oosnmp = "snmp4j repository" at "https://server.oosnmp.net/dist/release"
+   val oosnmp = "snmp4j repository" at "http://maven.opennms.org/content/groups/opennms.org-release"
+   val akkaRepo = "Akka Repo" at "http://repo.akka.io/releases/"
    val scalaToolsSnapshots = ScalaToolsSnapshots
   
   // -------------------------------------------------------------------------------------------------------------------
@@ -66,8 +65,8 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
 	val snmp = Dependencies.snmp4j /* Separate into I/O module */
 	val csv = Dependencies.opencsv
 	
-    // testing
-    val scalatest = Dependencies.scalaTest
+    	// testing
+	val scalatest = Dependencies.scalaTest
   }
   
   
@@ -78,6 +77,8 @@ class LibSalankParentProject(info: ProjectInfo) extends ParentProject(info) {
   class LibSalankAkkaProject(info: ProjectInfo) extends LibSalankDefaultProject(info) with AkkaProject {
 	//  val akkaCamel = akkaModule("camel")
 	val dispatcherExtras = akkaModule("dispatcher-extras")
+	val akkaSlf4j = akkaModule("slf4j")
+	//val remote = akkaModule("remote")
 	// testing
 	val scalatest = Dependencies.scalaTest
   }
